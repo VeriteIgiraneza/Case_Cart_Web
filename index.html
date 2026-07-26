@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#1976d2" />
+<title>CaseCart</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #fafafa; color: #212121; overscroll-behavior: none;
+  }
+  #app { max-width: 640px; margin: 0 auto; min-height: 100%; padding: 12px 16px 16px; }
+
+  .screen { display: none; flex-direction: column; height: calc(100vh - 28px); }
+  .screen.active { display: flex; }
+
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .header h1 { font-size: 24px; margin: 0; font-weight: 700; }
+  .header .count { color: #757575; font-size: 15px; }
+  .icon-btn {
+    background: none; border: none; padding: 8px; cursor: pointer; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #424242;
+  }
+  .icon-btn:hover { background: #eeeeee; }
+  .icon-btn svg { width: 22px; height: 22px; }
+
+  input[type="text"], input[type="tel"] {
+    width: 100%; padding: 14px 12px; font-size: 16px;
+    border: 1.5px solid #bdbdbd; border-radius: 6px; background: white;
+    outline: none; transition: border-color .15s;
+  }
+  input[type="text"]:focus, input[type="tel"]:focus { border-color: #1976d2; }
+  .field-error { border-color: #d32f2f !important; }
+  .error-msg { color: #d32f2f; font-size: 13px; margin-top: 4px; min-height: 18px; }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+  button {
+    flex: 1; padding: 12px 8px; font-size: 15px; font-weight: 500;
+    border: none; border-radius: 6px; cursor: pointer;
+    background: #1976d2; color: white; transition: opacity .15s;
+  }
+  button:disabled { background: #bdbdbd; cursor: not-allowed; }
+  button.outlined {
+    background: white; color: #1976d2; border: 1.5px solid #1976d2;
+  }
+  button.outlined:disabled { color: #bdbdbd; border-color: #bdbdbd; background: white; }
+
+  hr { border: none; border-top: 1px solid #e0e0e0; margin: 8px 0; }
+
+  .list { flex: 1; overflow-y: auto; margin-top: 4px; }
+  .list-empty { color: #757575; text-align: center; margin-top: 40px; font-size: 15px; }
+
+  .card {
+    background: white; border-radius: 8px; padding: 10px 12px;
+    margin-bottom: 8px; display: flex; align-items: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    cursor: pointer; user-select: none;
+    transition: background .15s;
+  }
+  .card .pos { font-size: 20px; font-weight: 700; margin-right: 16px; min-width: 42px; }
+  .card .num { font-size: 18px; flex: 1; }
+  .card.matched .pos { color: #2e7d32; }
+  .card .check {
+    color: #2e7d32; font-size: 18px; font-weight: 700; padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .card .check.clickable { cursor: pointer; }
+  .card .check.clickable:hover { background: #e8f5e9; }
+  .card .remove {
+    color: #b71c1c; background: none; border: none; padding: 6px;
+    font-size: 20px; cursor: pointer; border-radius: 50%; flex: 0;
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  }
+  .card .remove:hover { background: #ffebee; }
+  .card.history-card { flex-direction: column; align-items: stretch; padding: 12px; }
+  .card.history-card.selected { background: #ffcdd2; }
+  .card .h-time { font-weight: 600; font-size: 15px; }
+  .card .h-count { font-size: 13px; color: #757575; margin-top: 2px; }
+  .card .h-preview { font-size: 13px; margin-top: 6px; word-break: break-word; color: #424242; }
+
+  .result-slot { min-height: 0; transition: min-height .2s; }
+  .result-card {
+    padding: 12px; border-radius: 8px; font-size: 17px; font-weight: 600;
+    margin-bottom: 8px;
+    animation: slideDown .25s ease-out;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .result-card.found         { background: #c8e6c9; color: #1b5e20; }
+  .result-card.already       { background: #ffe0b2; color: #e65100; }
+  .result-card.notfound      { background: #ffcdd2; color: #b71c1c; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .modal-backdrop.active { display: flex; }
+  .modal {
+    background: white; border-radius: 12px; padding: 20px;
+    max-width: 340px; width: 100%;
+  }
+  .modal h3 { margin: 0 0 8px; font-size: 18px; }
+  .modal p { margin: 0 0 20px; font-size: 15px; color: #424242; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .modal-actions button {
+    flex: 0; padding: 8px 16px; background: none; color: #1976d2;
+    font-weight: 600;
+  }
+  .modal-actions button.danger { color: #b71c1c; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SETUP SCREEN -->
+  <div id="screen-setup" class="screen active">
+    <div class="header">
+      <h1>Carts</h1>
+      <button class="icon-btn" id="btn-open-history" aria-label="History">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      </button>
+    </div>
+
+    <input type="tel" id="setup-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="4-digit cart number" />
+    <div class="error-msg" id="setup-error"></div>
+
+    <div class="btn-row">
+      <button id="btn-next">Next</button>
+      <button id="btn-cut" class="outlined">Cut A</button>
+      <button id="btn-done">Done</button>
+    </div>
+
+    <hr />
+
+    <div class="list" id="setup-list"></div>
+  </div>
+
+  <!-- MATCHING SCREEN -->
+  <div id="screen-matching" class="screen">
+    <div class="header">
+      <h1>Match Boxes</h1>
+      <div class="count" id="matching-count">0 / 0</div>
+    </div>
+
+    <input type="tel" id="matching-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="4-digit box number" />
+    <div style="height: 8px;"></div>
+
+    <div class="btn-row">
+      <button id="btn-check" disabled>Check Box</button>
+      <button id="btn-view">View</button>
+    </div>
+
+    <div class="result-slot" id="result-slot"></div>
+
+    <hr />
+
+    <div class="list" id="matching-list"></div>
+
+    <div class="btn-row" style="margin-top: 8px;">
+      <button class="outlined" id="btn-back-setup">Back to Setup</button>
+      <button class="outlined" id="btn-reset">Start Over</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY SCREEN -->
+  <div id="screen-summary" class="screen">
+    <div class="header">
+      <h1>All Carts</h1>
+      <div class="count" id="summary-count">0 / 0 matched</div>
+    </div>
+    <hr />
+    <div class="list" id="summary-list"></div>
+    <button class="outlined" id="btn-back-matching" style="margin-top: 8px;">Back</button>
+  </div>
+
+  <!-- HISTORY SCREEN -->
+  <div id="screen-history" class="screen">
+    <div class="header" id="history-header"></div>
+    <hr />
+    <div class="list" id="history-list"></div>
+    <button class="outlined" id="btn-back-from-history" style="margin-top: 8px;">Back</button>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <p id="modal-body"></p>
+    <div class="modal-actions">
+      <button id="modal-cancel">Cancel</button>
+      <button id="modal-confirm" class="danger">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Storage ----------
+const KEY = 'casecart_history_v2';
+
+const Store = {
+  load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+    catch { return []; }
+  },
+  saveAll(list) {
+    localStorage.setItem(KEY, JSON.stringify(list));
+  },
+  upsert(session) {
+    const list = this.load();
+    const idx = list.findIndex(s => s.id === session.id);
+    if (idx >= 0) list[idx] = session;
+    else list.push(session);
+    list.sort((a, b) => b.timestamp - a.timestamp);
+    this.saveAll(list);
+  },
+  delete(ids) {
+    const list = this.load().filter(s => !ids.has(s.id));
+    this.saveAll(list);
+  }
+};
+
+// ---------- State ----------
+const state = {
+  screen: 'setup',
+  carts: [],           // { position, number, group, matched }
+  sessionId: null,
+  nextGroup: 'A',
+  lastResult: null,    // { kind: 'found' | 'already' | 'notfound', number, position, group }
+  selectedHistoryIds: new Set(),
+  longPressTimer: null,
+};
+
+function autoSave() {
+  if (state.sessionId == null) return;
+  Store.upsert({
+    id: state.sessionId,
+    timestamp: Date.now(),
+    carts: state.carts.map(c => ({ number: c.number, group: c.group, matched: c.matched }))
+  });
+}
+
+// ---------- Screen routing ----------
+function setScreen(name) {
+  state.screen = name;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  render();
+}
+
+// ---------- Modal ----------
+function confirmModal(title, body, confirmLabel = 'Confirm', onConfirm) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = body;
+  const confirmBtn = document.getElementById('modal-confirm');
+  confirmBtn.textContent = confirmLabel;
+  const backdrop = document.getElementById('modal-backdrop');
+  backdrop.classList.add('active');
+  const cleanup = () => {
+    backdrop.classList.remove('active');
+    confirmBtn.onclick = null;
+  };
+  confirmBtn.onclick = () => { cleanup(); onConfirm(); };
+  document.getElementById('modal-cancel').onclick = cleanup;
+  backdrop.onclick = (e) => { if (e.target === backdrop) cleanup(); };
+}
+
+// ---------- Rendering ----------
+function render() {
+  if (state.screen === 'setup') renderSetup();
+  else if (state.screen === 'matching') renderMatching();
+  else if (state.screen === 'summary') renderSummary();
+  else if (state.screen === 'history') renderHistory();
+}
+
+function renderSetup() {
+  document.getElementById('btn-cut').textContent = 'Cut ' + state.nextGroup;
+  const hasInGroup = state.carts.some(c => c.group === state.nextGroup);
+  document.getElementById('btn-cut').disabled = !hasInGroup || state.nextGroup >= 'Z';
+
+  const input = document.getElementById('setup-input').value;
+  document.getElementById('btn-done').disabled = state.carts.length === 0 && input.length !== 4;
+
+  const list = document.getElementById('setup-list');
+  list.innerHTML = '';
+  state.carts.forEach(cart => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <span class="pos">${cart.group}${cart.position}</span>
+      <span class="num">${cart.number}</span>
+      <button class="remove" aria-label="Remove">✕</button>
+    `;
+    div.querySelector('.remove').addEventListener('click', (e) => {
+      e.stopPropagation();
+      confirmModal('Remove cart?',
+        `Remove cart ${cart.group}${cart.position} (${cart.number})?`,
+        'Remove',
+        () => removeCart(cart.position));
+    });
+    list.appendChild(div);
+  });
+}
+
+function renderMatching() {
+  const matched = state.carts.filter(c => c.matched).length;
+  document.getElementById('matching-count').textContent = `${matched} / ${state.carts.length}`;
+
+  const input = document.getElementById('matching-input').value;
+  document.getElementById('btn-check').disabled = input.length !== 4;
+
+  const slot = document.getElementById('result-slot');
+  slot.innerHTML = '';
+  if (state.lastResult) {
+    const r = state.lastResult;
+    const div = document.createElement('div');
+    div.className = 'result-card ' + r.kind;
+    if (r.kind === 'found') div.textContent = `Box ${r.number} → Cart ${r.group}${r.position}`;
+    else if (r.kind === 'already') div.textContent = `⚠ Box ${r.number} already matched (Cart ${r.group}${r.position})`;
+    else div.textContent = `✗ Box ${r.number} — no matching cart`;
+    slot.appendChild(div);
+  }
+
+  const list = document.getElementById('matching-list');
+  list.innerHTML = '';
+  state.carts.forEach(cart => {
+    const div = document.createElement('div');
+    div.className = 'card' + (cart.matched ? ' matched' : '');
+    div.innerHTML = `
+      <span class="pos">${cart.group}${cart.position}</span>
+      <span class="num">${cart.number}</span>
+      ${cart.matched ? `<span class="check clickable">✓ ${cart.group}${cart.position}</span>` : ''}
+    `;
+    if (cart.matched) {
+      div.querySelector('.check').addEventListener('click', (e) => {
+        e.stopPropagation();
+        confirmModal('Deselect cart?',
+          `Mark cart ${cart.group}${cart.position} (${cart.number}) as unmatched?`,
+          'Deselect',
+          () => unmatchCart(cart.position));
+      });
+    }
+    list.appendChild(div);
+  });
+}
+
+function renderSummary() {
+  const matched = state.carts.filter(c => c.matched).length;
+  document.getElementById('summary-count').textContent = `${matched} / ${state.carts.length} matched`;
+  const list = document.getElementById('summary-list');
+  list.innerHTML = '';
+  state.carts.forEach(cart => {
+    const div = document.createElement('div');
+    div.className = 'card' + (cart.matched ? ' matched' : '');
+    div.innerHTML = `
+      <span class="pos">${cart.group}${cart.position}</span>
+      <span class="num">${cart.number}</span>
+      ${cart.matched ? `<span class="check">✓ ${cart.group}${cart.position}</span>` : ''}
+    `;
+    list.appendChild(div);
+  });
+}
+
+function renderHistory() {
+  const sessions = Store.load();
+  const inSelection = state.selectedHistoryIds.size > 0;
+  const header = document.getElementById('history-header');
+  header.innerHTML = '';
+
+  if (inSelection) {
+    header.innerHTML = `
+      <button class="icon-btn" id="btn-cancel-select" aria-label="Cancel">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+      <h1>${state.selectedHistoryIds.size} selected</h1>
+      <button class="icon-btn" id="btn-delete-selected" aria-label="Delete" style="color:#b71c1c">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    `;
+    header.querySelector('#btn-cancel-select').onclick = () => {
+      state.selectedHistoryIds = new Set(); render();
+    };
+    header.querySelector('#btn-delete-selected').onclick = () => {
+      confirmModal('Delete sessions?',
+        `Delete ${state.selectedHistoryIds.size} session(s)?`,
+        'Delete',
+        () => {
+          Store.delete(state.selectedHistoryIds);
+          state.selectedHistoryIds = new Set();
+          render();
+        });
+    };
+  } else {
+    header.innerHTML = `<h1>History</h1><div style="width:44px"></div>`;
+  }
+
+  const list = document.getElementById('history-list');
+  list.innerHTML = '';
+  if (sessions.length === 0) {
+    list.innerHTML = '<div class="list-empty">No sessions saved yet.</div>';
+    return;
+  }
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+  });
+  sessions.forEach(session => {
+    const isSel = state.selectedHistoryIds.has(session.id);
+    const matched = session.carts.filter(c => c.matched).length;
+    const preview = session.carts
+      .map((c, i) => `${c.group}${i + 1}. ${c.number}`)
+      .join('   ');
+    const div = document.createElement('div');
+    div.className = 'card history-card' + (isSel ? ' selected' : '');
+    div.innerHTML = `
+      <div class="h-time">${fmt.format(new Date(session.timestamp))}</div>
+      <div class="h-count">${matched} / ${session.carts.length} matched</div>
+      <div class="h-preview">${preview}</div>
+    `;
+
+    // long-press to select, short tap to open (or toggle if in selection)
+    let longPressed = false;
+    const startPress = () => {
+      longPressed = false;
+      state.longPressTimer = setTimeout(() => {
+        longPressed = true;
+        state.selectedHistoryIds.add(session.id);
+        render();
+      }, 500);
+    };
+    const cancelPress = () => clearTimeout(state.longPressTimer);
+    div.addEventListener('touchstart', startPress, { passive: true });
+    div.addEventListener('touchend', cancelPress);
+    div.addEventListener('touchmove', cancelPress);
+    div.addEventListener('mousedown', startPress);
+    div.addEventListener('mouseup', cancelPress);
+    div.addEventListener('mouseleave', cancelPress);
+    div.addEventListener('click', () => {
+      if (longPressed) return;
+      if (state.selectedHistoryIds.size > 0) {
+        if (isSel) state.selectedHistoryIds.delete(session.id);
+        else state.selectedHistoryIds.add(session.id);
+        render();
+      } else {
+        loadSession(session);
+      }
+    });
+    // desktop right-click also enters selection
+    div.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      state.selectedHistoryIds.add(session.id); render();
+    });
+
+    list.appendChild(div);
+  });
+}
+
+// ---------- Actions ----------
+function addCart(number) {
+  state.carts.push({
+    position: state.carts.length + 1,
+    number,
+    group: state.nextGroup,
+    matched: false,
+  });
+  autoSave();
+  render();
+}
+
+function removeCart(position) {
+  state.carts = state.carts
+    .filter(c => c.position !== position)
+    .map((c, i) => ({ ...c, position: i + 1 }));
+  autoSave();
+  render();
+}
+
+function unmatchCart(position) {
+  const c = state.carts.find(c => c.position === position);
+  if (c) c.matched = false;
+  autoSave();
+  render();
+}
+
+function matchBox(number) {
+  const cart = state.carts.find(c => c.number === number);
+  if (!cart) {
+    state.lastResult = { kind: 'notfound', number };
+  } else if (cart.matched) {
+    state.lastResult = { kind: 'already', number, position: cart.position, group: cart.group };
+  } else {
+    cart.matched = true;
+    state.lastResult = { kind: 'found', number, position: cart.position, group: cart.group };
+    autoSave();
+  }
+  // re-trigger animation by clearing then setting
+  render();
+}
+
+function loadSession(session) {
+  state.carts = session.carts.map((c, i) => ({
+    position: i + 1, number: c.number, group: c.group, matched: c.matched
+  }));
+  state.sessionId = session.id;
+  state.nextGroup = state.carts.length > 0 ? state.carts[state.carts.length - 1].group : 'A';
+  state.lastResult = null;
+  setScreen('setup');
+}
+
+// ---------- Event listeners ----------
+document.getElementById('setup-input').addEventListener('input', (e) => {
+  const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+  e.target.value = v;
+  document.getElementById('setup-error').textContent = '';
+  e.target.classList.remove('field-error');
+  document.getElementById('btn-done').disabled = state.carts.length === 0 && v.length !== 4;
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  const el = document.getElementById('setup-input');
+  const v = el.value;
+  const err = document.getElementById('setup-error');
+  if (v.length !== 4) {
+    err.textContent = 'Must be exactly 4 digits';
+    el.classList.add('field-error');
+    return;
+  }
+  if (state.carts.some(c => c.number === v)) {
+    err.textContent = 'Already added';
+    el.classList.add('field-error');
+    return;
+  }
+  addCart(v);
+  el.value = '';
+});
+
+document.getElementById('btn-cut').addEventListener('click', () => {
+  if (state.nextGroup < 'Z' && state.carts.some(c => c.group === state.nextGroup)) {
+    state.nextGroup = String.fromCharCode(state.nextGroup.charCodeAt(0) + 1);
+    render();
+  }
+});
+
+document.getElementById('btn-done').addEventListener('click', () => {
+  const el = document.getElementById('setup-input');
+  const v = el.value;
+  if (v.length === 4 && !state.carts.some(c => c.number === v)) {
+    addCart(v);
+    el.value = '';
+  }
+  if (state.carts.length === 0) return;
+  if (state.sessionId == null) {
+    state.sessionId = Date.now();
+    autoSave();
+  }
+  setScreen('matching');
+});
+
+document.getElementById('btn-open-history').addEventListener('click', () => setScreen('history'));
+
+document.getElementById('matching-input').addEventListener('input', (e) => {
+  const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+  e.target.value = v;
+  document.getElementById('btn-check').disabled = v.length !== 4;
+});
+
+document.getElementById('btn-check').addEventListener('click', () => {
+  const el = document.getElementById('matching-input');
+  if (el.value.length !== 4) return;
+  matchBox(el.value);
+  el.value = '';
+  document.getElementById('btn-check').disabled = true;
+});
+
+document.getElementById('btn-view').addEventListener('click', () => setScreen('summary'));
+
+document.getElementById('btn-back-setup').addEventListener('click', () => setScreen('setup'));
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  confirmModal('Start over?',
+    'This will clear the current session. Your history is kept.',
+    'Start Over',
+    () => {
+      state.carts = [];
+      state.sessionId = null;
+      state.nextGroup = 'A';
+      state.lastResult = null;
+      setScreen('setup');
+    });
+});
+
+document.getElementById('btn-back-matching').addEventListener('click', () => setScreen('matching'));
+
+document.getElementById('btn-back-from-history').addEventListener('click', () => {
+  state.selectedHistoryIds = new Set();
+  setScreen('setup');
+});
+
+// initial
+render();
+</script>
+</body>
+</html>
