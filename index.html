@@ -6,12 +6,23 @@
 <meta name="theme-color" content="#1976d2" />
 <title>CaseCart</title>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: rgba(0,0,0,0); }
   html, body {
     margin: 0; padding: 0; height: 100%;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: #fafafa; color: #212121; overscroll-behavior: none;
   }
+  .summary-header h1 { flex: 1; text-align: center; }
+  button, .icon-btn, .card, .check, .remove {
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    user-select: none;
+  }
+  /* Keep hover styles strictly for devices that actually have pointer hover (desktop) */
+  @media (hover: hover) and (pointer: fine) {
+    .icon-btn:hover { background: #eeeeee; }
+    .card .remove:hover { background: #ffebee; }
+  }
+ 
   #app { max-width: 640px; margin: 0 auto; min-height: 100%; padding: 12px 16px 16px; }
 
   .screen { display: none; flex-direction: column; height: calc(100vh - 28px); }
@@ -24,11 +35,28 @@
   .header h1 { font-size: 24px; margin: 0; font-weight: 700; }
   .header .count { color: #757575; font-size: 15px; }
   .icon-btn {
-    background: none; border: none; padding: 8px; cursor: pointer; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    color: #424242;
+    --btn-bg: transparent;
+    --btn-fg: #424242;
+    background: var(--btn-bg); border: none; padding: 0; cursor: pointer; border-radius: 0%;
+    display: inline-flex; align-items: right; justify-content: center;
+    color: var(--btn-fg);
+    width: auto;
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
   }
-  .icon-btn:hover { background: #eeeeee; }
+  #btn-open-history {
+    align-items: flex-start;
+    justify-content: flex-end;
+  }
+
+  #btn-back-matching {
+    padding: 2px;
+    width: 32px;
+  }
+  
   .icon-btn svg { width: 22px; height: 22px; }
 
   input[type="text"], input[type="tel"] {
@@ -42,15 +70,18 @@
 
   .btn-row { display: flex; gap: 8px; margin-top: 8px; }
   button {
+    --btn-bg: #1976d2;
+    --btn-fg: #ffffff;
     flex: 1; padding: 12px 8px; font-size: 15px; font-weight: 500;
     border: none; border-radius: 6px; cursor: pointer;
-    background: #1976d2; color: white; transition: opacity .15s;
+    background: var(--btn-bg); color: var(--btn-fg); transition: opacity .15s;
   }
-  button:disabled { background: #bdbdbd; cursor: not-allowed; }
+  button:disabled { --btn-bg: #bdbdbd; cursor: not-allowed; }
   button.outlined {
-    background: white; color: #1976d2; border: 1.5px solid #1976d2;
+    --btn-bg: #ffffff; --btn-fg: #1976d2;
+    border: 1.5px solid currentColor;
   }
-  button.outlined:disabled { color: #bdbdbd; border-color: #bdbdbd; background: white; }
+  button.outlined:disabled { --btn-fg: #bdbdbd; }
 
   hr { border: none; border-top: 1px solid #e0e0e0; margin: 8px 0; }
 
@@ -76,19 +107,18 @@
     border-radius: 4px;
   }
   .card .check.clickable { cursor: pointer; }
-  .card .check.clickable:hover { background: #d0efd6; }
   .card .unmatch-btn {
-    background: none; border: none; color: #b71c1c;
+    --btn-bg: transparent; --btn-fg: #b71c1c;
+    background: var(--btn-bg); border: none; color: var(--btn-fg);
     font-size: 18px; font-weight: 600; padding: 4px 10px; margin-right: 4px;
     cursor: pointer; border-radius: 4px;
   }
-  .card .unmatch-btn:hover { background: #ffebee; }
   .card .remove {
-    color: #b71c1c; background: none; border: none; padding: 6px;
+    --btn-bg: transparent; --btn-fg: #b71c1c;
+    color: var(--btn-fg); background: var(--btn-bg); border: none; padding: 6px;
     font-size: 20px; cursor: pointer; border-radius: 50%; flex: 0;
     width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
   }
-  .card .remove:hover { background: #ffebee; }
   .card.history-card { flex-direction: column; align-items: stretch; padding: 12px; }
   .card.history-card.selected { background: #ffcdd2; }
   .card .h-time { font-weight: 600; font-size: 15px; }
@@ -124,10 +154,23 @@
   .modal p { margin: 0 0 20px; font-size: 15px; color: #424242; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
   .modal-actions button {
-    flex: 0; padding: 8px 16px; background: none; color: #1976d2;
+    --btn-bg: transparent; --btn-fg: #1976d2;
+    flex: 0; padding: 8px 16px; background: var(--btn-bg); color: var(--btn-fg);
     font-weight: 600;
   }
-  .modal-actions button.danger { color: #b71c1c; }
+  .modal-actions button.danger { --btn-fg: #b71c1c; }
+
+  /* State clamp — keep these as the LAST rules in the stylesheet.
+     Every button re-asserts its own paint in every state, so nothing lingers. */
+  button:hover, button:focus, button:active, button:focus-visible {
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    box-shadow: none;
+    filter: none;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+  }
+  button:focus { outline: none; }
+  button:focus-visible { outline: 2px solid #1976d2; outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -185,13 +228,15 @@
 
   <!-- SUMMARY SCREEN -->
   <div id="screen-summary" class="screen">
-    <div class="header">
+    <div class="header summary-header">
+      <button class="icon-btn" id="btn-back-matching" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </button>
       <h1>All Carts</h1>
       <div class="count" id="summary-count">0 / 0 matched</div>
     </div>
     <hr />
     <div class="list" id="summary-list"></div>
-    <button class="outlined" id="btn-back-matching" style="margin-top: 8px;">Back</button>
   </div>
 
   <!-- HISTORY SCREEN -->
@@ -357,7 +402,7 @@ function renderMatching() {
     if (cart.placed) {
       rightHtml = `<span class="check clickable">✓ Placed</span>`;
     } else if (cart.matched) {
-      rightHtml = `<button class="unmatch-btn" aria-label="Unmatch">✕</button><span class="check clickable">✓ ${cart.group}${cart.position}</span>`;
+      rightHtml = `<span class="check clickable">${cart.group}${cart.position}</span>`;
     }
 
     div.innerHTML = `
@@ -375,12 +420,33 @@ function renderMatching() {
           () => unmarkPlaced(cart.position));
       });
     } else if (cart.matched) {
-      div.querySelector('.check').addEventListener('click', (e) => {
+      const checkEl = div.querySelector('.check');
+      let longPressed = false;
+      let timer = null;
+      const start = () => {
+        longPressed = false;
+        timer = setTimeout(() => {
+          longPressed = true;
+          confirmModal('Unmatch cart?',
+            `Mark cart ${cart.group}${cart.position} (${cart.number}) as unmatched?`,
+            'Unmatch',
+            () => unmatchCart(cart.position));
+        }, 500);
+      };
+      const cancel = () => clearTimeout(timer);
+      checkEl.addEventListener('touchstart', start, { passive: true });
+      checkEl.addEventListener('touchend', cancel);
+      checkEl.addEventListener('touchmove', cancel);
+      checkEl.addEventListener('mousedown', start);
+      checkEl.addEventListener('mouseup', cancel);
+      checkEl.addEventListener('mouseleave', cancel);
+      checkEl.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (longPressed) return;
         markPlaced(cart.position);
       });
-      div.querySelector('.unmatch-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
+      checkEl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
         confirmModal('Unmatch cart?',
           `Mark cart ${cart.group}${cart.position} (${cart.number}) as unmatched?`,
           'Unmatch',
