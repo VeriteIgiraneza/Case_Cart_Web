@@ -66,13 +66,23 @@
   }
   .card .pos { font-size: 20px; font-weight: 700; margin-right: 16px; min-width: 42px; }
   .card .num { font-size: 18px; flex: 1; }
+  .card.matched { background: #e8f5e9; }
   .card.matched .pos { color: #2e7d32; }
+  .card.matched.placed { background: #e3f2fd; }
+  .card.matched.placed .pos { color: #1565c0; }
+  .card.matched.placed .check { color: #1565c0; }
   .card .check {
     color: #2e7d32; font-size: 18px; font-weight: 700; padding: 4px 8px;
     border-radius: 4px;
   }
   .card .check.clickable { cursor: pointer; }
-  .card .check.clickable:hover { background: #e8f5e9; }
+  .card .check.clickable:hover { background: #d0efd6; }
+  .card .unmatch-btn {
+    background: none; border: none; color: #b71c1c;
+    font-size: 18px; font-weight: 600; padding: 4px 10px; margin-right: 4px;
+    cursor: pointer; border-radius: 4px;
+  }
+  .card .unmatch-btn:hover { background: #ffebee; }
   .card .remove {
     color: #b71c1c; background: none; border: none; padding: 6px;
     font-size: 20px; cursor: pointer; border-radius: 50%; flex: 0;
@@ -162,6 +172,8 @@
     </div>
 
     <div class="result-slot" id="result-slot"></div>
+
+    <button id="btn-next-source" style="margin-top: 4px; display: none;">Done with this source cart →</button>
 
     <hr />
 
@@ -335,20 +347,44 @@ function renderMatching() {
 
   const list = document.getElementById('matching-list');
   list.innerHTML = '';
+  const hasCurrentBatch = state.carts.some(c => c.matched && !c.placed);
+  document.getElementById('btn-next-source').style.display = hasCurrentBatch ? 'block' : 'none';
+
   state.carts.forEach(cart => {
     const div = document.createElement('div');
-    div.className = 'card' + (cart.matched ? ' matched' : '');
+    let cls = 'card';
+    if (cart.matched) cls += ' matched';
+    if (cart.placed) cls += ' placed';
+    div.className = cls;
+
+    let rightHtml = '';
+    if (cart.placed) {
+      rightHtml = `<span class="check clickable">✓ Placed</span>`;
+    } else if (cart.matched) {
+      rightHtml = `<button class="unmatch-btn" aria-label="Unmatch">✕</button><span class="check clickable">✓ ${cart.group}${cart.position}</span>`;
+    }
+
     div.innerHTML = `
       <span class="pos">${cart.group}${cart.position}</span>
       <span class="num">${cart.number}</span>
-      ${cart.matched ? `<span class="check clickable">✓ ${cart.group}${cart.position}</span>` : ''}
+      ${rightHtml}
     `;
-    if (cart.matched) {
+
+    if (cart.placed) {
       div.querySelector('.check').addEventListener('click', (e) => {
         e.stopPropagation();
-        confirmModal('Deselect cart?',
+        unmarkPlaced(cart.position);
+      });
+    } else if (cart.matched) {
+      div.querySelector('.check').addEventListener('click', (e) => {
+        e.stopPropagation();
+        markPlaced(cart.position);
+      });
+      div.querySelector('.unmatch-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        confirmModal('Unmatch cart?',
           `Mark cart ${cart.group}${cart.position} (${cart.number}) as unmatched?`,
-          'Deselect',
+          'Unmatch',
           () => unmatchCart(cart.position));
       });
     }
@@ -473,6 +509,7 @@ function addCart(number) {
     number,
     group: state.nextGroup,
     matched: false,
+    placed: false,
   });
   autoSave();
   render();
@@ -489,6 +526,28 @@ function removeCart(position) {
 function unmatchCart(position) {
   const c = state.carts.find(c => c.position === position);
   if (c) c.matched = false;
+  autoSave();
+  render();
+}
+
+function markPlaced(position) {
+  const c = state.carts.find(c => c.position === position);
+  if (c && c.matched) c.placed = true;
+  autoSave();
+  render();
+}
+
+function unmarkPlaced(position) {
+  const c = state.carts.find(c => c.position === position);
+  if (c) c.placed = false;
+  autoSave();
+  render();
+}
+
+function markAllCurrentPlaced() {
+  state.carts.forEach(c => {
+    if (c.matched && !c.placed) c.placed = true;
+  });
   autoSave();
   render();
 }
@@ -584,6 +643,13 @@ document.getElementById('btn-check').addEventListener('click', () => {
 });
 
 document.getElementById('btn-view').addEventListener('click', () => setScreen('summary'));
+
+document.getElementById('btn-next-source').addEventListener('click', () => {
+  confirmModal('Done with this source cart?',
+    'All current matches will be marked as placed.',
+    'Done',
+    () => markAllCurrentPlaced());
+});
 
 document.getElementById('btn-back-setup').addEventListener('click', () => setScreen('setup'));
 
