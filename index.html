@@ -173,8 +173,6 @@
 
     <div class="result-slot" id="result-slot"></div>
 
-    <button id="btn-next-source" style="margin-top: 4px; display: none;">Done with this source cart →</button>
-
     <hr />
 
     <div class="list" id="matching-list"></div>
@@ -347,8 +345,6 @@ function renderMatching() {
 
   const list = document.getElementById('matching-list');
   list.innerHTML = '';
-  const hasCurrentBatch = state.carts.some(c => c.matched && !c.placed);
-  document.getElementById('btn-next-source').style.display = hasCurrentBatch ? 'block' : 'none';
 
   state.carts.forEach(cart => {
     const div = document.createElement('div');
@@ -373,7 +369,10 @@ function renderMatching() {
     if (cart.placed) {
       div.querySelector('.check').addEventListener('click', (e) => {
         e.stopPropagation();
-        unmarkPlaced(cart.position);
+        confirmModal('Undo placed?',
+          `Mark cart ${cart.group}${cart.position} (${cart.number}) back to matched (not placed)?`,
+          'Undo',
+          () => unmarkPlaced(cart.position));
       });
     } else if (cart.matched) {
       div.querySelector('.check').addEventListener('click', (e) => {
@@ -399,12 +398,38 @@ function renderSummary() {
   list.innerHTML = '';
   state.carts.forEach(cart => {
     const div = document.createElement('div');
-    div.className = 'card' + (cart.matched ? ' matched' : '');
+    let cls = 'card';
+    if (cart.matched) cls += ' matched';
+    if (cart.placed) cls += ' placed';
+    div.className = cls;
+
+    let rightHtml = '';
+    if (cart.placed) {
+      rightHtml = `<span class="check clickable">✓ Placed</span>`;
+    } else if (cart.matched) {
+      rightHtml = `<span class="check clickable">${cart.group}${cart.position}</span>`;
+    }
+
     div.innerHTML = `
       <span class="pos">${cart.group}${cart.position}</span>
       <span class="num">${cart.number}</span>
-      ${cart.matched ? `<span class="check">✓ ${cart.group}${cart.position}</span>` : ''}
+      ${rightHtml}
     `;
+
+    if (cart.placed) {
+      div.querySelector('.check').addEventListener('click', (e) => {
+        e.stopPropagation();
+        confirmModal('Undo placed?',
+          `Mark cart ${cart.group}${cart.position} (${cart.number}) back to matched (not placed)?`,
+          'Undo',
+          () => unmarkPlaced(cart.position));
+      });
+    } else if (cart.matched) {
+      div.querySelector('.check').addEventListener('click', (e) => {
+        e.stopPropagation();
+        markPlaced(cart.position);
+      });
+    }
     list.appendChild(div);
   });
 }
@@ -602,6 +627,7 @@ document.getElementById('btn-next').addEventListener('click', () => {
   }
   addCart(v);
   el.value = '';
+  el.focus();
 });
 
 document.getElementById('btn-cut').addEventListener('click', () => {
@@ -640,16 +666,11 @@ document.getElementById('btn-check').addEventListener('click', () => {
   matchBox(el.value);
   el.value = '';
   document.getElementById('btn-check').disabled = true;
+  el.focus();
 });
 
 document.getElementById('btn-view').addEventListener('click', () => setScreen('summary'));
 
-document.getElementById('btn-next-source').addEventListener('click', () => {
-  confirmModal('Done with this source cart?',
-    'All current matches will be marked as placed.',
-    'Done',
-    () => markAllCurrentPlaced());
-});
 
 document.getElementById('btn-back-setup').addEventListener('click', () => setScreen('setup'));
 
