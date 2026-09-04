@@ -552,7 +552,7 @@ function renderHistory() {
     div.className = 'card history-card' + (isSel ? ' selected' : '');
     div.innerHTML = `
       <div class="h-time">${fmt.format(new Date(session.timestamp))}</div>
-      <div class="h-count">${matched} / ${session.carts.length} matched</div>
+      <div class="h-count">${matched} / ${session.carts.length}</div>
       <div class="h-preview">${preview}</div>
     `;
 
