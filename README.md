@@ -1,64 +1,56 @@
 # CaseCart
 
-Match numbered surgical case carts to the boxes that belong on them.
+A tool for matching numbered surgical case carts to the supply boxes that belong on them — built for a real workflow I do at work, in two versions: a web app and a native Android app.
 
-In the OR supply workflow, each surgical case cart carries a 4-digit number, and the boxes staged on source carts carry their own 4-digit numbers. CaseCart holds the list of cart numbers, then tells you — as you read each box number out loud or type it in — which cart position that box goes to.
+**[Live demo](#)** · **[Download APK](#)**
 
-## Two versions
+---
 
-| | Web | Android |
-|---|---|---|
-| Stack | Single-file HTML/CSS/JS, no frameworks | Kotlin + Jetpack Compose |
-| Package / entry | `index.html` | `com.reflekt.casecart` |
-| Storage | `localStorage`, key `casecart_history_v2` | SharedPreferences `casecart_prefs`, key `history_v2` |
-| Distribution | GitHub Pages | Signed APK via GitHub Releases |
+## The problem
 
-The web app is a port of the Android app and keeps the same core features.
+In hospital surgical supply, each case cart is labeled with a 4-digit number. The boxes that need to be loaded onto those carts arrive on separate source carts, each box also carrying a 4-digit number. Someone has to hold thirty or so numbers in their head, read each box, and figure out which cart it goes to.
 
-## Workflow
+The existing method is a paper list and memory. It is slow, it is easy to lose your place when you get interrupted, and a misplaced box means a cart goes to the OR incomplete.
 
-1. **Carts (setup)** — type each 4-digit cart number and press **Next**. Each entry gets a position (`A1`, `A2`, …). Press **Cut A** to start a new cut group, so the next entries become `B3`, `B4`, and so on. **Done** moves to matching.
-2. **Match Boxes** — type a box number and press **Check Box**. The result banner says which cart it belongs to, warns if that cart was already matched, or reports no match.
-3. **Finish** — batch-marks every green (matched) cart as done/gray, so the remaining greens from the next round stand out. Repeatable: match more boxes, press Finish again.
-4. **View (summary)** — the full cart list with match status.
-5. **History** — every session is auto-saved. Tap to reopen one, long-press to select and delete.
+CaseCart replaces the paper list. You enter the cart numbers once, then call out box numbers as you go — the app tells you the cart position instantly and tracks what is left.
 
-## Cart states
+## What it does
 
-| State | Appearance | How to get there / undo |
-|---|---|---|
-| Unmatched | Plain white card | — |
-| Matched | Green card, green position label | Set by checking a box number. Long-press (or right-click) the check to unmatch. |
-| Placed / done | Gray card, gray text | Set by **Finish**, or by tapping an individual check. Tap the check to undo. |
+- **Setup** — enter the 4-digit number for each cart. Entries are grouped into "cuts" (`A1`, `A2`, … `B3`, `B4`) matching how carts are physically staged.
+- **Matching** — enter a box number and get an immediate answer: which cart position it belongs to, a warning if that cart is already filled, or a clear "no matching cart."
+- **Two-stage completion** — matched carts turn green; pressing **Finish** batches them to gray. The next round of matches stands out against the ones already handled, which is what makes the tool usable across a shift rather than a single pass.
+- **History** — every session auto-saves and can be reopened mid-task, because this work gets interrupted constantly.
+
+## Built with
+
+**Android** — Kotlin, Jetpack Compose, Material 3, SharedPreferences for persistence.
+
+**Web** — a single self-contained HTML file: vanilla JS, no framework, no build step, no dependencies. Deployed on GitHub Pages.
+
+## Engineering decisions
+
+**No backend.** The data is a few dozen 4-digit numbers that matter for one shift. A server would have added authentication, network dependency, and a hospital IT review for no benefit. Both versions persist locally — Android via SharedPreferences, web via `localStorage`.
+
+**Single-file web app.** The web version is one HTML file with everything inlined. It loads on a locked-down hospital browser, works offline, and can be handed to a coworker as a link with nothing to install. That constraint shaped the whole architecture: hand-rolled screen routing, direct DOM rendering, a single mutable state object.
+
+**Positions are derived, not stored.** Cart position is computed from list order on load rather than persisted. Removing a cart mid-setup renumbers everything below it automatically, with no chance of the stored index drifting from reality.
+
+**Two versions, one model.** The web app is a port of the Android app and shares its data shape and session format. Writing the same feature twice against different UI frameworks made the state model considerably clearer than the first version was.
+
+**Built from the inside.** I work in hospital supply chain, so the requirements came from doing the task rather than from a spec. The "Finish" flow above exists because the first version was unusable after the first pass — everything was green and nothing stood out.
 
 ## Running it
 
-**Web** — open `index.html` in a browser, or serve the folder. It is self-contained: no build step, no dependencies, no network calls. Everything lives in browser storage on that device.
+**Web** — open `index.html`, or visit the demo link. Nothing to install.
 
-**Android** — open the project in Android Studio and run. Dependency versions are pinned in `libs.versions.toml` (core-ktx 1.13.1, activityCompose 1.9.3, lifecycleRuntimeKtx 2.8.7, composeBom 2024.10.01) to avoid AGP conflicts.
+**Android** — open in Android Studio and run, or install the signed APK from Releases.
 
-## Data model
+## What's next
 
-A session is a list of carts plus a timestamp and a stable id:
+- Barcode scanning via camera, to remove manual entry entirely
+- Session export for shift handoff
+- Resolving a stubborn tap-highlight rendering bug on Android Chrome
 
-```json
-{
-  "id": 1757606400000,
-  "timestamp": 1757606400000,
-  "carts": [
-    { "number": "4821", "group": "A", "matched": true, "placed": true }
-  ]
-}
-```
+---
 
-Positions are not stored — they are derived from list order on load, so removing a cart renumbers the rest.
-
-## Constraints
-
-- The web app must stay a **single self-contained HTML file**. No frameworks, no build tooling, no external assets.
-- Cart numbers are exactly 4 digits and must be unique within a session.
-
-## Known issues
-
-- Android Chrome sometimes leaves a stuck gray oval on a tapped button. Several CSS and JS workarounds have not resolved it.
-- Session history is per-device and per-browser. Clearing site data clears it.
+Built by [Ibaze](#) · [Portfolio](#) · [LinkedIn](#)
