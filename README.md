@@ -2,7 +2,7 @@
 
 A tool for matching numbered surgical case carts to the supply boxes that belong on them — built for a real workflow I do at work, in two versions: a web app and a native Android app.
 
-**[Live demo](#)** · **[Download APK](#)**
+**[[Live Demo](https://veriteigiraneza.github.io/Case_Cart_Web/)](#)** · **[Download APK Not Available](#)**
 
 ---
 
@@ -53,4 +53,4 @@ CaseCart replaces the paper list. You enter the cart numbers once, then call out
 
 ---
 
-Built by [Ibaze](#) · [Portfolio](#) · [LinkedIn](#)
+Built by [Verite](#) · [Portfolio](#) · [LinkedIn](#)
